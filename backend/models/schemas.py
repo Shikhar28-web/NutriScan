@@ -38,7 +38,28 @@ class AnalyzeFoodResponse(BaseModel):
         description=(
             "Per-disease risk output, e.g. "
             "{'diabetes': {'risk': 0.7, 'confidence': 0.8}}. "
-            "Risk is a normalized score in [0, 1]."
+            "Risk is an absolute score in [0, 1] based on WHO dietary thresholds."
+        ),
+    )
+    processing_level: Dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "NOVA food processing classification. Keys: nova_group (1–4), label, "
+            "description, health_note, source (openfoodfacts | inferred)."
+        ),
+    )
+    age_group_impacts: Dict[str, Dict[str, str]] = Field(
+        default_factory=dict,
+        description=(
+            "Per-age-group impact assessment. Keys: infant, child, young_adult, adult, elderly. "
+            "Each value has 'label', 'risk_level' (low/moderate/high/very_high), and 'notes'."
+        ),
+    )
+    consumption_disclaimer: Dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "Evidence-based consumption frequency guidance including "
+            "'recommended_frequency', 'general_guidance', 'specific_warnings', and 'disclaimer'."
         ),
     )
     ingredient_analysis: Optional[str] = Field(
@@ -53,4 +74,3 @@ class RecommendationItem(BaseModel):
     product: ProductDetails
     health_score: float = Field(..., ge=0, le=100)
     disease_risks: Dict[str, Dict[str, float]]
-
