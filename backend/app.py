@@ -19,10 +19,15 @@ def create_app() -> FastAPI:
         description="Backend + ML pipeline for NutriScan AI (packaged food health analysis).",
     )
 
-    # CORS configuration – will allow your future frontend to call this API.
+    # CORS configuration – allow the Next.js frontend during development.
+    # Add your production domain here when deploying.
+    cors_origins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # In production, restrict to your frontend domains.
+        allow_origins=cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -42,4 +47,3 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-
