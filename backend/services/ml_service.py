@@ -27,9 +27,8 @@ def _weighted_avg(pairs: List[tuple]) -> float:
     return max(0.0, min(1.0, sum(v * w for v, w in pairs) / total_w))
 
 
-# ---------------------------------------------------------------------------
 # Health score
-# ---------------------------------------------------------------------------
+
 
 def compute_health_score(nutriments: Dict[str, float]) -> float:
     """
@@ -89,16 +88,13 @@ def compute_health_score(nutriments: Dict[str, float]) -> float:
     return round(max(0.0, min(100.0, score)), 2)
 
 
-# ---------------------------------------------------------------------------
 # Disease risk prediction
-# ---------------------------------------------------------------------------
 
 def predict_disease_risks(nutriments: Dict[str, float]) -> Dict[str, Dict[str, float]]:
     """
     Predict disease risk scores (0–1) from nutriments.
 
     KEY FIX vs previous version
-    ---------------------------
     The old code divided every risk by the maximum risk, which forced at least
     one disease to always score 1.0 — even for healthy products.  This version
     uses absolute, evidence-based thresholds so a genuinely healthy product
@@ -277,9 +273,7 @@ def compute_processing_level(
     }
 
 
-# ---------------------------------------------------------------------------
 # Age-group impact analysis
-# ---------------------------------------------------------------------------
 
 # Per-age-group thresholds for sugar, salt, additives, energy (per 100 g).
 # Derived from WHO / NHS / EFSA guidelines for each life-stage.
@@ -415,10 +409,7 @@ def compute_age_group_impacts(
 
     return result
 
-
-# ---------------------------------------------------------------------------
 # Consumption disclaimer
-# ---------------------------------------------------------------------------
 
 def compute_consumption_disclaimer(
     nutriments: Dict[str, float],
