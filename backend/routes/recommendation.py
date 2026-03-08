@@ -2,7 +2,7 @@ from typing import List
 
 from fastapi import APIRouter, HTTPException, Query
 
-from ..models.schemas import AnalyzeFoodResponse, RecommendationItem
+from ..models.schemas import RecommendationItem
 from ..services.ml_service import compute_health_score, predict_disease_risks
 from ..services.openfoodfacts_service import fetch_product_by_barcode
 

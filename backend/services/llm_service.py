@@ -14,21 +14,37 @@ def _build_ingredient_prompt(
     nutriments: Dict[str, float],
     health_score: float,
     disease_risks: Dict[str, float],
+    age_group_impacts: Dict[str, Dict[str, str]],
+    processing_level: Dict[str, str],
 ) -> str:
     """
-    Build a prompt for Gemini that explains pros/cons of ingredients.
+    Build a prompt for Gemini that explains pros/cons of ingredients,
+    including age-group-specific impacts.
 
     The LLM is ONLY allowed to explain and summarize; it must not
     override the numeric scores from the ML models.
     """
+    # Format age group impacts into a readable block for the prompt.
+    age_group_lines = "\n".join(
+        f"  - {v['label']}: risk={v['risk_level']} | {v['notes']}"
+        for v in age_group_impacts.values()
+    ) if age_group_impacts else "  - Not available."
+
+    nova_summary = (
+        f"NOVA {processing_level.get('nova_group', '?')} — "
+        f"{processing_level.get('label', 'unknown')} "
+        f"(source: {processing_level.get('source', 'unknown')})"
+    ) if processing_level else "Not available."
+
     return f"""
 You are a nutrition expert explaining packaged food ingredients.
 
 RULES:
 - DO NOT change or guess any numeric scores.
-- Use the provided health_score and disease_risks as ground truth from ML models.
+- Use the provided health_score, disease_risks, age_group_impacts, and processing_level as ground truth from ML models.
 - Your job is ONLY to explain pros and cons of ingredients and give a brief summary.
 - Focus on evidence-based, general guidance (no medical diagnosis).
+- If ingredients are listed as "[Ingredient list not available in database]", base your analysis on ONLY the nutritional data provided (nutriments, health_score, disease_risks, processing_level, age_group_impacts). Still provide a full and useful analysis.
 - ALWAYS answer in clear Markdown with the exact sections requested below.
 
 Given:
@@ -36,6 +52,9 @@ Given:
 - nutriments (per 100g): {nutriments}
 - ML health_score (0-100): {health_score}
 - ML disease_risks (0-1): {disease_risks}
+- ML processing_level: {nova_summary}
+- ML age_group_impacts:
+{age_group_lines}
 
 Explain in this EXACT structure (Markdown, no extra sections, no introduction before the headings):
 
@@ -47,13 +66,22 @@ Explain in this EXACT structure (Markdown, no extra sections, no introduction be
 - One bullet per risky ingredient or negative aspect.
 - Mention if something is high in sugar, fat, salt, additives, or refined carbs.
 
+### Processing Level
+- State the NOVA group and what it means for this product.
+- Mention any specific ultra-processed ingredients or additives found that contributed to the classification.
+
 ### Overall Summary
 - 2-3 short sentences connecting the ingredients to:
   - health_score (0-100)
   - each disease_risk (diabetes, heart_disease, obesity, hypertension)
+  - processing_level NOVA group
+
+### Age Group Impacts
+- One bullet per age group (Infant, Child, Young Adult, Adult, Elderly).
+- Briefly explain why this product is more or less suitable for each group based on the ML age_group_impacts data above.
 
 ### Who Should Be Careful
-- Short bullets calling out which groups should be more careful (e.g., people with diabetes, heart disease, obesity, hypertension) and why.
+- Short bullets calling out which specific groups (e.g., diabetics, hypertensive individuals, infants) should limit or avoid this product and why.
 """
 
 
@@ -62,6 +90,8 @@ async def explain_ingredients(
     nutriments: Dict[str, float],
     health_score: float,
     disease_risks: Dict[str, float],
+    age_group_impacts: Optional[Dict[str, Dict[str, str]]] = None,
+    processing_level: Optional[Dict[str, str]] = None,
 ) -> str:
     """
     Use Gemini to generate a human-readable explanation of ingredient pros/cons.
@@ -69,7 +99,8 @@ async def explain_ingredients(
     If the Gemini API key is not configured, returns a fallback explanation.
     """
     if not ingredients_text:
-        return "No ingredient list available to analyze."
+        # No ingredient list — still generate analysis from nutritional data only
+        ingredients_text = "[Ingredient list not available in database]"
 
     settings = get_settings()
     if not settings.GEMINI_API_KEY:
@@ -106,8 +137,14 @@ async def explain_ingredients(
         "models/gemini-1.5-flash",
     ]
 
-    prompt = _build_ingredient_prompt(ingredients_text, nutriments, health_score, disease_risks)
-    loop = asyncio.get_event_loop()
+    prompt = _build_ingredient_prompt(
+        ingredients_text, nutriments, health_score, disease_risks,
+        age_group_impacts or {},
+        processing_level or {},
+    )
+    # get_running_loop() is the correct API in Python 3.10+;
+    # get_event_loop() is deprecated when a loop is already running.
+    loop = asyncio.get_running_loop()
 
     for model_name in candidate_models:
         if not model_name:

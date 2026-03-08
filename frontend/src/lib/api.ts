@@ -1,0 +1,127 @@
+import axios from 'axios';
+import type { AnalyzeResponse, Product, RecommendationItem } from './types';
+
+// Call FastAPI directly.  CORS is configured on the backend to allow localhost:3000.
+// NEXT_PUBLIC_API_URL is set in .env.local to http://127.0.0.1:8000
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+
+const api = axios.create({
+  baseURL: BASE_URL,
+  timeout: 30000,
+  headers: { 'Content-Type': 'application/json' },
+});
+
+/**
+ * Fetch basic product details by barcode (no ML analysis).
+ */
+export async function scanProduct(barcode: string): Promise<Product | null> {
+  try {
+    const { data } = await api.post<Product>('/api/scan-product', { barcode });
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Run full ML + LLM analysis for a product.
+ * Accepts either a barcode (numeric string) or a product name.
+ */
+export async function analyzeFood(query: string): Promise<AnalyzeResponse> {
+  const isBarcode = /^\d+$/.test(query.trim());
+  const body = isBarcode
+    ? { barcode: query.trim() }
+    : { product_name: query.trim() };
+  const { data } = await api.post<AnalyzeResponse>('/api/analyze-food', body);
+  return data;
+}
+
+/**
+ * Fetch healthier alternative recommendations for a given barcode.
+ */
+export async function getRecommendations(barcode: string): Promise<RecommendationItem[]> {
+  try {
+    const { data } = await api.get<RecommendationItem[]>('/api/recommendations', {
+      params: { barcode },
+    });
+    return data;
+  } catch {
+    return [];
+  }
+}
+
+// ─── Color Helpers ───────────────────────────────────────────────────────────
+
+export function healthScoreColor(score: number): string {
+  if (score >= 80) return '#22c55e';
+  if (score >= 60) return '#84cc16';
+  if (score >= 40) return '#eab308';
+  if (score >= 20) return '#f97316';
+  return '#ef4444';
+}
+
+export function healthScoreLabel(score: number): string {
+  if (score >= 80) return 'Excellent';
+  if (score >= 60) return 'Good';
+  if (score >= 40) return 'Moderate';
+  if (score >= 20) return 'Poor';
+  return 'Very Unhealthy';
+}
+
+export function riskColor(risk: number): string {
+  if (risk < 0.25) return '#22c55e';
+  if (risk < 0.5)  return '#eab308';
+  if (risk < 0.75) return '#f97316';
+  return '#ef4444';
+}
+
+export function riskLabel(risk: number): string {
+  if (risk < 0.25) return 'Low';
+  if (risk < 0.5)  return 'Moderate';
+  if (risk < 0.75) return 'High';
+  return 'Very High';
+}
+
+export function novaColor(group: string): string {
+  const n = parseInt(group);
+  if (n === 1) return '#22c55e';
+  if (n === 2) return '#84cc16';
+  if (n === 3) return '#eab308';
+  if (n === 4) return '#ef4444';
+  return '#94a3b8';
+}
+
+export function ageLevelColor(level: string): string {
+  switch (level) {
+    case 'low':       return '#22c55e';
+    case 'moderate':  return '#eab308';
+    case 'high':      return '#f97316';
+    case 'very_high': return '#ef4444';
+    default:          return '#94a3b8';
+  }
+}
+
+export function nutrientColor(key: string, value: number): string {
+  // FSA traffic-light thresholds per 100g
+  const thresholds: Record<string, [number, number]> = {
+    sugar_100g:         [5,  22.5],
+    fat_100g:           [3,  17.5],
+    saturated_fat_100g: [1.5, 5],
+    salt_100g:          [0.3, 1.5],
+    energy_kcal:        [100, 450],
+    fiber_100g:         [0,   6],   // Higher is better
+    additives_count:    [0,   5],
+  };
+  const t = thresholds[key];
+  if (!t) return '#94a3b8';
+  const [low, high] = t;
+  // Fiber is inverted (higher = better)
+  if (key === 'fiber_100g') {
+    if (value >= high)  return '#22c55e';
+    if (value >= low)   return '#eab308';
+    return '#ef4444';
+  }
+  if (value <= low)  return '#22c55e';
+  if (value <= high) return '#eab308';
+  return '#ef4444';
+}
