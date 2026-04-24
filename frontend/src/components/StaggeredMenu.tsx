@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import gsap from 'gsap';
 import './StaggeredMenu.css';
+import { Sparkles } from 'lucide-react';
 
 type MenuItem = {
   label: string;
@@ -34,11 +35,41 @@ export function StaggeredMenu({
 
   const items: MenuItem[] = useMemo(
     () => [
-      { label: 'Home', action: () => (onClose(), onGoHome()) },
-      { label: 'Scan', action: () => (onClose(), onGoScan()) },
-      { label: 'Dashboard', action: () => (onClose(), onGoDashboard()) },
-      { label: 'Pricing', action: () => (onClose(), onGoPricing()) },
-      { label: 'FAQ', action: () => (onClose(), onGoFaq()) },
+      {
+        label: 'Home',
+        action: () => {
+          onClose();
+          onGoHome();
+        },
+      },
+      {
+        label: 'Scan',
+        action: () => {
+          onClose();
+          onGoScan();
+        },
+      },
+      {
+        label: 'Dashboard',
+        action: () => {
+          onClose();
+          onGoDashboard();
+        },
+      },
+      {
+        label: 'Pricing',
+        action: () => {
+          onClose();
+          onGoPricing();
+        },
+      },
+      {
+        label: 'FAQ',
+        action: () => {
+          onClose();
+          onGoFaq();
+        },
+      },
     ],
     [onClose, onGoHome, onGoScan, onGoDashboard, onGoPricing, onGoFaq]
   );
@@ -49,14 +80,14 @@ export function StaggeredMenu({
     const itemsEl = itemsRef.current;
     if (!root || !panel || !itemsEl) return;
 
-    gsap.set(panel, { xPercent: 100 });
+    gsap.set(panel, { xPercent: 100, opacity: 0.95 });
     gsap.set(panel, { boxShadow: '0 30px 80px rgba(0,0,0,0.45)' });
     gsap.set(itemsEl.querySelectorAll('[data-menu-item]'), { yPercent: 140, rotate: 10, opacity: 1 });
 
     tl.current?.kill();
     tl.current = gsap
       .timeline({ paused: true })
-      .to(panel, { xPercent: 0, duration: 0.9, ease: 'power3.inOut' }, 0.12)
+      .to(panel, { xPercent: 0, opacity: 1, duration: 0.8, ease: 'power3.inOut' }, 0.1)
       .to(
         itemsEl.querySelectorAll('[data-menu-item]'),
         { yPercent: 0, rotate: 0, duration: 1, ease: 'power4.out', stagger: 0.06 },
@@ -90,19 +121,31 @@ export function StaggeredMenu({
         aria-label="Close menu"
         onClick={onClose}
         className={`absolute inset-0 ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
-        style={{ background: 'transparent' }}
+        style={{ background: isOpen ? 'rgba(0, 0, 0, 0.35)' : 'transparent', transition: 'background 260ms ease' }}
       />
 
       {/* Slide layers + main panel */}
       <div className="absolute top-0 right-0 h-full flex pointer-events-none">
         <aside
           ref={panelRef}
-          className="staggered-menu__panel relative h-full bg-white text-black pointer-events-auto"
+          className="staggered-menu__panel relative h-full text-white pointer-events-auto"
           role="dialog"
           aria-modal="true"
           aria-label="Navigation menu"
         >
-          <div className="h-full flex flex-col px-8 pt-28 pb-10">
+          <div className="h-full flex flex-col px-8 pt-16 pb-10 overflow-y-auto overscroll-contain">
+            <div className="staggered-menu__topbar">
+              <p className="staggered-menu__eyebrow">NUTRISCAN NAVIGATION</p>
+              <button type="button" onClick={onClose} className="staggered-menu__close-btn" aria-label="Close">
+                Close
+              </button>
+            </div>
+
+            <div className="staggered-menu__hero">
+              <Sparkles size={16} />
+              <span>Food intelligence in one tap</span>
+            </div>
+
             <div ref={itemsRef} className="staggered-menu__items flex flex-col gap-6">
               {items.map(item => (
                 <button
@@ -117,7 +160,7 @@ export function StaggeredMenu({
               ))}
             </div>
 
-            <div className="mt-auto pt-10 border-t border-black/10">
+            <div className="mt-auto pt-10 border-t border-white/10">
               <p className="uppercase tracking-[0.28em] text-[11px]" style={{ color: 'var(--accent)' }}>
                 Socials
               </p>

@@ -3,10 +3,10 @@
 import Image from 'next/image';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight, BookOpen, Menu, Sparkles, Wand2 } from 'lucide-react';
-import { ProgramsOverlay } from '@/components/ProgramsOverlay';
+import ChatAssistant from '@/components/ChatAssistant';
 import { StaggeredMenu } from '@/components/StaggeredMenu';
+import AnimatedReveal from '@/components/AnimatedReveal';
 
 const tags = [
   'WHO/UK FSA BENCHMARKS',
@@ -16,10 +16,69 @@ const tags = [
   'HEALTHIER SWAPS',
 ];
 
+const builtKeywordCards = [
+  {
+    title: 'SUGAR SIGNALS',
+    body: 'GLYCEMIC IMPACT, ADDED SUGARS, SWEETENERS, AND WHY IT MATTERS.',
+    image:
+      'https://images.unsplash.com/photo-1493770348161-369560ae357d?auto=format&fit=crop&w=1200&q=80',
+  },
+  {
+    title: 'HEART CHECK',
+    body: 'SATURATED FAT + SODIUM FLAGS WITH CLEAR WHAT TO DO NEXT.',
+    image:
+      'https://images.unsplash.com/photo-1482049016688-2d3e1b311543?auto=format&fit=crop&w=1200&q=80',
+  },
+  {
+    title: 'CLEAN LABEL',
+    body: 'NOVA + ADDITIVES WITH INSTANT CLARITY ON ULTRA-PROCESSING.',
+    image:
+      'https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=1200&q=80',
+  },
+];
+
+const experienceKeywordCards = [
+  {
+    keyword: 'WHO/UK FSA BENCHMARKS',
+    body: 'Benchmarked nutrition scores designed for trustworthy label interpretation.',
+    image:
+      'https://images.unsplash.com/photo-1470337458703-46ad1756a187?auto=format&fit=crop&w=1200&q=80',
+  },
+  {
+    keyword: 'NOVA CLASSIFICATION',
+    body: 'Understand processing levels instantly with direct ultra-processed food flags.',
+    image:
+      'https://images.unsplash.com/photo-1515003197210-e0cd71810b5f?auto=format&fit=crop&w=1200&q=80',
+  },
+  {
+    keyword: 'AGE-GROUP IMPACTS',
+    body: 'Get relevance for kids, teens, adults, and seniors in one quick glance.',
+    image:
+      'https://images.unsplash.com/photo-1505576399279-565b52d4ac71?auto=format&fit=crop&w=1200&q=80',
+  },
+  {
+    keyword: 'AI INGREDIENT EXPLANATIONS',
+    body: 'Translate complex ingredients into plain language and practical action.',
+    image:
+      'https://images.unsplash.com/photo-1490818387583-1baba5e638af?auto=format&fit=crop&w=1200&q=80',
+  },
+  {
+    keyword: 'HEALTHIER SWAPS',
+    body: 'Discover cleaner alternatives and smarter choices for each product category.',
+    image:
+      'https://images.unsplash.com/photo-1467453678174-768ec283a940?auto=format&fit=crop&w=1200&q=80',
+  },
+  {
+    keyword: 'PERSONAL HEALTH FIT',
+    body: 'Context-aware guidance matched to your health goals and daily food patterns.',
+    image:
+      'https://images.unsplash.com/photo-1494390248081-4e521a5940db?auto=format&fit=crop&w=1200&q=80',
+  },
+];
+
 export default function LandingPage() {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isProgramsOpen, setIsProgramsOpen] = useState(false);
 
   return (
     <main className="min-h-screen w-full text-white overflow-x-hidden font-sans bg-bg-primary">
@@ -32,19 +91,11 @@ export default function LandingPage() {
                 <Image src="/logo.svg" alt="NutriScan logo" width={32} height={32} />
                 <span className="text-2xl font-semibold tracking-tighter text-white">nutriscan</span>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsMenuOpen(v => !v)}
-                className="liquid-glass px-5 py-3 rounded-full inline-flex items-center gap-3 text-white/90"
-              >
-                <Menu size={18} />
-                <span className="text-[12px] font-medium tracking-[0.22em]">MENU</span>
-              </button>
+              <div className="h-11 w-[118px]" aria-hidden="true" />
             </div>
 
             <div className="flex-1 flex flex-col items-center justify-center text-center pt-10 pb-6">
-              <Image src="/logo.svg" alt="NutriScan logo" width={80} height={80} className="opacity-95" />
-              <div className="mt-10">
+              <div>
                 <div className="overflow-visible pb-2">
                   <h1 className="text-5xl lg:text-7xl font-medium tracking-tight leading-[1.08]">Reimagining the</h1>
                 </div>
@@ -109,6 +160,14 @@ export default function LandingPage() {
               </div>
             </div>
 
+            <div className="liquid-glass mt-6 rounded-3xl overflow-hidden border border-white/10">
+              <img
+                src="https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=1200&q=80"
+                alt="Healthy meal ingredients"
+                className="w-full h-44 object-cover"
+              />
+            </div>
+
             <div className="mt-auto liquid-glass rounded-[2.5rem] p-8">
               <div className="grid grid-cols-2 gap-4">
                 <div className="liquid-glass rounded-3xl p-6">
@@ -132,30 +191,32 @@ export default function LandingPage() {
       <div className="relative z-20 pointer-events-auto">
         <section className="relative py-24 px-6 md:px-16">
           <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-            <div>
-              <p className="tracking-[0.28em] text-[11px]" style={{ color: 'var(--accent)' }}>
-                START HERE
-              </p>
-              <h2 className="mt-4 text-4xl md:text-6xl font-normal leading-[0.95]">
-                Know your food in seconds,
-                <span className="block gradient-text">eat with confidence.</span>
-              </h2>
-              <p className="mt-6 text-[12px] tracking-[0.2em] text-white/70 max-w-xl leading-relaxed">
-                Scan labels, decode ingredients, and get clearer health signals designed for everyday decisions.
-              </p>
-            </div>
-            <div className="glass rounded-3xl overflow-hidden border border-white/10">
+            <AnimatedReveal>
+              <div>
+                <p className="tracking-[0.28em] text-[11px]" style={{ color: 'var(--accent)' }}>
+                  START HERE
+                </p>
+                <h2 className="mt-4 text-4xl md:text-6xl font-normal leading-[0.95]">
+                  Know your food in seconds,
+                  <span className="block gradient-text">eat with confidence.</span>
+                </h2>
+                <p className="mt-6 text-[12px] tracking-[0.2em] text-white/70 max-w-xl leading-relaxed">
+                  Scan labels, decode ingredients, and get clearer health signals designed for everyday decisions.
+                </p>
+              </div>
+            </AnimatedReveal>
+            <AnimatedReveal delay={0.08} className="glass rounded-3xl overflow-hidden border border-white/10">
               <img
                 src="https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=1400&q=80"
                 alt="Fresh healthy ingredients"
                 className="w-full h-64 object-cover"
               />
-            </div>
+            </AnimatedReveal>
           </div>
         </section>
 
         <section className="relative py-28 px-6 md:px-16">
-          <div className="max-w-6xl mx-auto">
+          <AnimatedReveal className="max-w-6xl mx-auto">
             <p className="tracking-[0.28em] text-[11px]" style={{ color: 'var(--accent)' }}>
               BUILT FOR FOOD + HEALTH
             </p>
@@ -164,15 +225,15 @@ export default function LandingPage() {
               <span className="block gradient-text"> made practical.</span>
             </h2>
             <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <SimpleCard title="SUGAR SIGNALS" body="GLYCEMIC IMPACT, ADDED SUGARS, SWEETENERS, AND WHY IT MATTERS." />
-              <SimpleCard title="HEART CHECK" body="SATURATED FAT + SODIUM FLAGS WITH CLEAR WHAT TO DO NEXT." />
-              <SimpleCard title="CLEAN LABEL" body="NOVA + ADDITIVES WITH INSTANT CLARITY ON ULTRA-PROCESSING." />
+              {builtKeywordCards.map(card => (
+                <SimpleCard key={card.title} title={card.title} body={card.body} image={card.image} />
+              ))}
             </div>
-          </div>
+          </AnimatedReveal>
         </section>
 
         <section className="relative py-28 px-6 md:px-16">
-          <div className="max-w-6xl mx-auto">
+          <AnimatedReveal className="max-w-6xl mx-auto">
             <p className="tracking-[0.28em] text-[11px]" style={{ color: 'var(--accent-2)' }}>
               THE EXPERIENCE
             </p>
@@ -187,7 +248,28 @@ export default function LandingPage() {
                 </span>
               ))}
             </div>
-          </div>
+
+            <div className="mt-10 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+              {experienceKeywordCards.map(item => (
+                <div
+                  key={item.keyword}
+                  className="group relative aspect-square rounded-2xl border border-white/10 overflow-hidden glass transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(0,0,0,0.3)]"
+                >
+                  <img
+                    src={item.image}
+                    alt={item.keyword}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent" />
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(255,255,255,0.16),transparent_45%)] opacity-60 group-hover:opacity-90 transition-opacity duration-500" />
+                  <div className="relative h-full p-3 md:p-4 flex flex-col justify-end">
+                    <p className="text-[9px] md:text-[10px] tracking-[0.16em] text-[var(--accent)] leading-snug">{item.keyword}</p>
+                    <p className="mt-2 text-[10px] md:text-[11px] tracking-[0.04em] text-white/80 leading-snug line-clamp-3">{item.body}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </AnimatedReveal>
         </section>
       </div>
 
@@ -201,35 +283,20 @@ export default function LandingPage() {
         onGoFaq={() => router.push('/faq')}
       />
 
-      <div className="fixed bottom-8 right-8 z-50 pointer-events-auto">
-        <AnimatePresence mode="wait">
-          {!isProgramsOpen ? (
-            <motion.button
-              key="join"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              type="button"
-              onClick={() => setIsProgramsOpen(true)}
-              className="px-6 py-3 md:px-12 md:py-5 text-[13px] md:text-[18px] font-normal tracking-[0.15em] bg-white text-black border border-white/10"
-            >
-              JOIN THE CLUB
-            </motion.button>
-          ) : null}
-        </AnimatePresence>
-      </div>
-
-      <ProgramsOverlay isOpen={isProgramsOpen} onClose={() => setIsProgramsOpen(false)} />
+      <ChatAssistant productContext={null} launcherVariant="icon" />
     </main>
   );
 }
 
-function SimpleCard({ title, body }: { title: string; body: string }) {
+function SimpleCard({ title, body, image }: { title: string; body: string; image: string }) {
   return (
-    <div className="glass rounded-3xl p-8 border border-white/10">
-      <p className="text-[11px] tracking-[0.28em] text-white/70">SIGNAL</p>
-      <h4 className="mt-4 text-2xl md:text-3xl font-normal">{title}</h4>
-      <p className="mt-5 text-[11px] tracking-[0.22em] text-white/70 leading-relaxed">{body}</p>
+    <div className="glass lift-hover rounded-3xl border border-white/10 overflow-hidden">
+      <img src={image} alt={title} className="w-full h-40 object-cover" />
+      <div className="p-8">
+        <p className="text-[11px] tracking-[0.28em] text-white/70">SIGNAL</p>
+        <h4 className="mt-4 text-2xl md:text-3xl font-normal">{title}</h4>
+        <p className="mt-5 text-[11px] tracking-[0.22em] text-white/70 leading-relaxed">{body}</p>
+      </div>
     </div>
   );
 }

@@ -56,13 +56,13 @@ body {
   }
 
   .btn-primary {
-    @apply rounded-xl px-6 py-3 text-[12px] tracking-[0.18em] font-medium;
+    @apply rounded-xl px-6 py-3 text-[12px] tracking-[0.18em] font-medium transition-transform duration-300 hover:-translate-y-0.5;
     background: linear-gradient(135deg, rgba(34, 197, 94, 0.9), rgba(16, 185, 129, 0.9));
     color: #02100a;
   }
 
   .btn-secondary {
-    @apply glass rounded-xl px-6 py-3 text-[12px] tracking-[0.18em] text-white/90;
+    @apply glass rounded-xl px-6 py-3 text-[12px] tracking-[0.18em] text-white/90 transition-transform duration-300 hover:-translate-y-0.5;
   }
 
   .glass {
@@ -138,18 +138,38 @@ body {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
   }
+}
 
-  /* Remove hover bubble/pop effect across glass surfaces */
-  .glass-hover:hover,
-  .glass:hover,
-  .liquid-glass:hover,
-  .liquid-glass-strong:hover {
-    transform: none !important;
-    box-shadow: none !important;
+/* Lift effect for interactive surfaces */
+@layer components {
+  button.glass,
+  a.glass,
+  button.liquid-glass,
+  a.liquid-glass,
+  button.liquid-glass-strong,
+  a.liquid-glass-strong {
+    transition: transform 220ms ease, box-shadow 220ms ease;
+    will-change: transform;
   }
 
-  [class*='hover:scale-'] {
-    transform: none !important;
+  button.glass:hover,
+  a.glass:hover,
+  button.liquid-glass:hover,
+  a.liquid-glass:hover,
+  button.liquid-glass-strong:hover,
+  a.liquid-glass-strong:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.35);
+  }
+
+  .lift-hover {
+    transition: transform 220ms ease, box-shadow 220ms ease;
+    will-change: transform;
+  }
+
+  .lift-hover:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 26px 70px rgba(0, 0, 0, 0.4);
   }
 }
 
