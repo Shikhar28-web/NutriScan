@@ -12,6 +12,8 @@ import {
   UploadCloud,
 } from 'lucide-react';
 import { useMemo, useRef } from 'react';
+import Navbar from '@/components/Navbar';
+import NutriChatbot from '@/components/NutriChatbot';
 
 const keywords = [
   'Protein',
@@ -58,17 +60,21 @@ export default function LandingPage() {
   });
 
   return (
-    <main ref={pageRef} className="relative overflow-x-hidden bg-[#06080f] text-white">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(0,255,153,0.16),transparent_30%),radial-gradient(circle_at_80%_20%,rgba(255,159,67,0.14),transparent_35%),radial-gradient(circle_at_50%_100%,rgba(88,116,255,0.1),transparent_40%)]" />
-      <FloatingKeywords />
-      <MovingObject progress={scrollYProgress} />
-      <Hero onStart={() => router.push('/scan')} />
-      <WhatIsNutriScan />
-      <ScanSection />
-      <Dashboard />
-      <DailyLifeImpact />
-      <CTA onStart={() => router.push('/scan')} />
-    </main>
+    <>
+      <Navbar />
+      <main ref={pageRef} className="relative overflow-x-hidden bg-[#06080f] text-white">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(0,255,153,0.16),transparent_30%),radial-gradient(circle_at_80%_20%,rgba(255,159,67,0.14),transparent_35%),radial-gradient(circle_at_50%_100%,rgba(88,116,255,0.1),transparent_40%)]" />
+        <FloatingKeywords />
+        <MovingObject progress={scrollYProgress} />
+        <Hero onStart={() => router.push('/scan')} />
+        <WhatIsNutriScan />
+        <ScanSection />
+        <Dashboard />
+        <DailyLifeImpact />
+        <CTA onStart={() => router.push('/scan')} />
+        <NutriChatbot />
+      </main>
+    </>
   );
 }
 
