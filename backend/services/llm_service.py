@@ -11,6 +11,111 @@ from ..config import get_settings
 _resolved_model_name: Optional[str] = None
 
 
+def _build_rule_based_ingredient_analysis(
+    ingredients_text: str,
+    nutriments: Dict[str, float],
+    health_score: float,
+    disease_risks: Dict[str, float],
+    age_group_impacts: Dict[str, Dict[str, str]],
+    processing_level: Dict[str, str],
+) -> str:
+    sugar = float(nutriments.get("sugar_100g", 0.0) or 0.0)
+    fat = float(nutriments.get("fat_100g", 0.0) or 0.0)
+    sat_fat = float(nutriments.get("saturated_fat_100g", 0.0) or 0.0)
+    salt = float(nutriments.get("salt_100g", 0.0) or 0.0)
+    fiber = float(nutriments.get("fiber_100g", 0.0) or 0.0)
+    protein = float(nutriments.get("proteins_100g", 0.0) or 0.0)
+    kcal = float(nutriments.get("energy_kcal", 0.0) or 0.0)
+    additives = float(nutriments.get("additives_count", 0.0) or 0.0)
+
+    def _f(v: float) -> str:
+        return f"{v:.1f}"
+
+    pros: list[str] = []
+    cons: list[str] = []
+    careful: list[str] = []
+
+    if fiber >= 6:
+        pros.append(f"Good fiber density ({_f(fiber)} g/100 g), which can support satiety and glycemic control.")
+    elif fiber >= 3:
+        pros.append(f"Moderate fiber content ({_f(fiber)} g/100 g) offers some protective benefit.")
+    else:
+        cons.append(f"Low fiber ({_f(fiber)} g/100 g), so this food may be less filling and less metabolically protective.")
+
+    if protein >= 10:
+        pros.append(f"Useful protein contribution ({_f(protein)} g/100 g) for satiety and balanced meals.")
+
+    if sugar > 22.5:
+        cons.append(f"High sugar by traffic-light standards ({_f(sugar)} g/100 g; high > 22.5 g).")
+        careful.append("People with diabetes, insulin resistance, or weight-management goals should limit portion size.")
+    elif sugar > 5:
+        cons.append(f"Moderate sugar density ({_f(sugar)} g/100 g); frequent intake can increase total free sugar load.")
+
+    if salt > 1.5:
+        cons.append(f"High salt by traffic-light standards ({_f(salt)} g/100 g; high > 1.5 g).")
+        careful.append("People with hypertension or cardiovascular risk should keep this occasional.")
+    elif salt > 0.3:
+        cons.append(f"Moderate salt ({_f(salt)} g/100 g); check total daily sodium from other foods.")
+
+    if sat_fat > 5:
+        cons.append(f"High saturated fat ({_f(sat_fat)} g/100 g; high > 5 g), which can raise cardiometabolic risk if frequent.")
+    elif sat_fat > 1.5:
+        cons.append(f"Moderate saturated fat ({_f(sat_fat)} g/100 g); pair with lower-saturated-fat foods.")
+
+    if fat > 17.5:
+        cons.append(f"High total fat ({_f(fat)} g/100 g; high > 17.5 g), increasing energy density.")
+
+    if kcal > 450:
+        cons.append(f"High energy density ({_f(kcal)} kcal/100 g), making overconsumption easier.")
+
+    if additives >= 5:
+        cons.append(f"Higher additive load detected ({_f(additives)} additives), consistent with a more processed profile.")
+    elif additives <= 1:
+        pros.append("Low additive count, suggesting a cleaner ingredient profile.")
+
+    if not pros:
+        pros.append("No strong protective nutrition markers were detected beyond baseline macronutrients.")
+    if not cons:
+        cons.append("No major red-flag nutrient threshold was exceeded in the available data.")
+
+    disease_bits = []
+    for key, value in disease_risks.items():
+        disease_bits.append(f"{key.replace('_', ' ')}: {round(float(value) * 100)}%")
+    disease_line = ", ".join(disease_bits) if disease_bits else "not available"
+
+    age_lines = []
+    for item in age_group_impacts.values():
+        label = item.get("label", "Unknown")
+        risk = item.get("risk_level", "unknown")
+        notes = item.get("notes", "")
+        age_lines.append(f"- **{label}**: {risk.capitalize()}. {notes}")
+    if not age_lines:
+        age_lines.append("- Age-specific impact could not be derived from available metadata.")
+
+    nova_group = processing_level.get("nova_group", "unknown")
+    nova_label = processing_level.get("label", "Unknown")
+    nova_desc = processing_level.get("description", "")
+
+    return (
+        "### Ingredient Pros\n"
+        + "\n".join(f"- {line}" for line in pros)
+        + "\n\n### Ingredient Cons\n"
+        + "\n".join(f"- {line}" for line in cons)
+        + "\n\n### Processing Level\n"
+        + f"- {nova_label} (Group {nova_group}).\n"
+        + (f"- {nova_desc}\n" if nova_desc else "")
+        + "\n### Overall Summary\n"
+        + f"- Health score: **{round(float(health_score), 2)}/100** based on the combined nutrient and processing profile.\n"
+        + f"- Disease-risk indicators: {disease_line}.\n"
+        + "- Interpretation is based on ingredient list context plus nutritional values per 100 g.\n"
+        + "\n### Age Group Impacts\n"
+        + "\n".join(age_lines)
+        + "\n\n### Who Should Be Careful\n"
+        + "\n".join(f"- {line}" for line in (careful or ["General population should use portion control for frequent intake."]))
+        + "\n"
+    )
+
+
 def _build_ingredient_prompt(
     ingredients_text: str,
     nutriments: Dict[str, float],
@@ -106,9 +211,13 @@ async def explain_ingredients(
 
     settings = get_settings()
     if not settings.GEMINI_API_KEY:
-        return (
-            "LLM ingredient analysis is unavailable because GEMINI_API_KEY is not configured. "
-            "Numeric scores are still computed by ML logic."
+        return _build_rule_based_ingredient_analysis(
+            ingredients_text,
+            nutriments,
+            health_score,
+            disease_risks,
+            age_group_impacts or {},
+            processing_level or {},
         )
 
     genai.configure(api_key=settings.GEMINI_API_KEY)
@@ -164,10 +273,15 @@ async def explain_ingredients(
 
     # If all attempts fail, return a clear message but never break the API.
     reason = f"{type(last_error).__name__}: {last_error}" if last_error else "UnknownError"
-    return (
-        "LLM ingredient explanation is temporarily unavailable "
-        f"(reason: {reason}). Numeric scores are still valid."
+    fallback = _build_rule_based_ingredient_analysis(
+        ingredients_text,
+        nutriments,
+        health_score,
+        disease_risks,
+        age_group_impacts or {},
+        processing_level or {},
     )
+    return f"{fallback}\n\n> Note: AI narrative model unavailable ({reason}). Showing deterministic nutrition analysis."
 
 
 async def analyze_food_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> dict:

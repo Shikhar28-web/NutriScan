@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useMemo, useRef } from 'react';
 import Navbar from '@/components/Navbar';
-import NutriChatbot from '@/components/NutriChatbot';
+import NutriChatbot from '@/components/nutrichat';
 
 const keywords = [
   'Protein',

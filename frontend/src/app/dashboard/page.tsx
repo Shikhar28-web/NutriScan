@@ -35,6 +35,51 @@ function getApiErrorMessage(value: unknown, fallback: string): string {
   return fallback;
 }
 
+function buildFallbackAnalysisMarkdown(data: AnalyzeResponse): string {
+  const nutriments = data.product?.nutriments ?? {};
+  const sugar = Number(nutriments.sugar_100g ?? 0);
+  const fat = Number(nutriments.fat_100g ?? 0);
+  const satFat = Number(nutriments.saturated_fat_100g ?? 0);
+  const salt = Number(nutriments.salt_100g ?? 0);
+  const fiber = Number(nutriments.fiber_100g ?? 0);
+  const protein = Number(nutriments.proteins_100g ?? 0);
+  const energy = Number(nutriments.energy_kcal ?? 0);
+  const additives = Number(nutriments.additives_count ?? 0);
+
+  const diseaseEntries = Object.entries(data.disease_risks ?? {}).sort((a, b) => b[1].risk - a[1].risk);
+  const diseaseSummary = diseaseEntries.length
+    ? diseaseEntries.map(([key, v]) => `${key.replace(/_/g, ' ')} ${Math.round(v.risk * 100)}%`).join(', ')
+    : 'not available';
+
+  const pros: string[] = [];
+  const cons: string[] = [];
+  if (fiber >= 6) pros.push(`Good fiber density (${fiber.toFixed(1)} g/100 g).`);
+  if (protein >= 10) pros.push(`Useful protein contribution (${protein.toFixed(1)} g/100 g).`);
+  if (sugar > 22.5) cons.push(`High sugar (${sugar.toFixed(1)} g/100 g; high > 22.5 g).`);
+  if (salt > 1.5) cons.push(`High salt (${salt.toFixed(1)} g/100 g; high > 1.5 g).`);
+  if (satFat > 5) cons.push(`High saturated fat (${satFat.toFixed(1)} g/100 g; high > 5 g).`);
+  if (fat > 17.5) cons.push(`High total fat (${fat.toFixed(1)} g/100 g; high > 17.5 g).`);
+  if (energy > 450) cons.push(`High energy density (${energy.toFixed(1)} kcal/100 g).`);
+  if (additives >= 5) cons.push(`Higher additive load (${additives.toFixed(0)} additives).`);
+  if (pros.length === 0) pros.push('No strong protective nutrition marker was detected in the available fields.');
+  if (cons.length === 0) cons.push('No major traffic-light threshold was exceeded in the available data.');
+
+  return [
+    '### Ingredient & Nutrition Analysis',
+    '',
+    '#### Positive Signals',
+    ...pros.map((line) => `- ${line}`),
+    '',
+    '#### Caution Signals',
+    ...cons.map((line) => `- ${line}`),
+    '',
+    '#### Risk Interpretation',
+    `- Disease-risk profile: ${diseaseSummary}.`,
+    `- Processing profile: ${data.processing_level?.label ?? 'Unknown'} (NOVA ${data.processing_level?.nova_group ?? 'unknown'}).`,
+    `- Composite health score: ${data.health_score.toFixed(2)}/100.`,
+  ].join('\n');
+}
+
 function SkeletonCard({ className = '' }: { className?: string }) {
   return (
     <div className={`glass rounded-2xl p-6 animate-pulse ${className}`}>
@@ -236,48 +281,67 @@ function DashboardContent() {
       </div>
 
       {/* Product header */}
-      <div className="glass rounded-2xl px-6 py-5 flex flex-col sm:flex-row sm:items-center gap-4 mb-8 border border-white/5">
+      <div className="glass rounded-2xl p-5 md:p-6 grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6 mb-8 border border-white/5">
         {product.image_url ? (
-          <div className="w-full sm:w-auto sm:min-w-[220px] rounded-xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center p-2">
+          <div className="rounded-xl overflow-hidden bg-white/[0.03] border border-white/10 flex items-center justify-center p-2 min-h-[240px]">
             <Image
               src={product.image_url}
               alt={product.product_name ?? 'Product image'}
               width={440}
               height={440}
-              className="w-full max-h-[320px] sm:max-h-[360px] h-auto object-contain"
+              className="w-full max-h-[340px] h-auto object-contain"
               unoptimized
             />
           </div>
         ) : (
-          <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">
+          <div className="rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-center min-h-[240px]">
             <Package size={22} className="text-slate-400" />
           </div>
         )}
-        <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold text-white truncate">
-            {product.product_name ?? 'Unknown Product'}
-          </h1>
-          <p className="text-slate-500 text-sm mt-0.5">
-            {product.brand && <span className="mr-3">{product.brand}</span>}
-            {product.barcode !== 'image-upload' && (
-              <span className="font-mono text-slate-600">{barcode || product.barcode}</span>
-            )}
-            {product.barcode === 'image-upload' && (
-              <span className="text-purple-400/70 text-xs">Analysed from image</span>
-            )}
-          </p>
+
+        <div className="min-w-0 flex flex-col gap-4">
+          <div className="space-y-2">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Analysed Product</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight break-words">
+              {product.product_name ?? 'Unknown Product'}
+            </h1>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+              <p className="text-[11px] uppercase tracking-wider text-slate-500">Brand</p>
+              <p className="text-sm text-slate-200 mt-1 break-words">{product.brand || 'Unknown'}</p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+              <p className="text-[11px] uppercase tracking-wider text-slate-500">Barcode</p>
+              <p className="text-sm text-slate-200 mt-1 font-mono break-all">
+                {product.barcode === 'image-upload' ? 'Image Upload' : (barcode || product.barcode)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+              <p className="text-[11px] uppercase tracking-wider text-slate-500">Health Score</p>
+              <p className="text-sm text-slate-200 mt-1">{health_score.toFixed(2)} / 100</p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+              <p className="text-[11px] uppercase tracking-wider text-slate-500">Processing</p>
+              <p className="text-sm text-slate-200 mt-1 break-words">{processing_level?.label ?? 'Unknown'}</p>
+            </div>
+          </div>
+
+          {product.barcode !== 'image-upload' && (
+            <div>
+              <a
+                href={`https://world.openfoodfacts.org/product/${encodeURIComponent(barcode || product.barcode)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors"
+              >
+                <ExternalLink size={13} />
+                View Source on OpenFoodFacts
+              </a>
+            </div>
+          )}
         </div>
-        {product.barcode !== 'image-upload' && (
-          <a
-            href={`https://world.openfoodfacts.org/product/${encodeURIComponent(barcode || product.barcode)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors flex-shrink-0"
-          >
-            <ExternalLink size={13} />
-            OpenFoodFacts
-          </a>
-        )}
       </div>
 
       {/* Row 1: Gauge + Nutrition + Disease Risks */}
@@ -291,7 +355,7 @@ function DashboardContent() {
       </div>
 
       <div className="mb-6">
-        <DiseaseRiskPanel risks={disease_risks} />
+        <DiseaseRiskPanel risks={disease_risks} nutriments={product.nutriments} />
       </div>
 
       {/* Row 2: Processing Level + Consumption Guidance */}
@@ -308,9 +372,9 @@ function DashboardContent() {
       )}
 
       {/* Row 4: Ingredient Analysis */}
-      {ingredient_analysis && (
+      {(ingredient_analysis || data) && (
         <div className="mb-6">
-          <IngredientAnalysis markdown={ingredient_analysis} />
+          <IngredientAnalysis markdown={ingredient_analysis || buildFallbackAnalysisMarkdown(data)} />
         </div>
       )}
 

@@ -1,13 +1,75 @@
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+import asyncio
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from ..models.schemas import AnalyzeFoodRequest, ScanRequest
 from ..services.ml_bridge import run_ml_bridge
+from ..services.llm_service import explain_ingredients
 
 
 router = APIRouter(tags=["ml"])
+
+
+def _extract_scalar_risks(raw_risks: object) -> dict[str, float]:
+    if not isinstance(raw_risks, dict):
+        return {}
+
+    out: dict[str, float] = {}
+    for disease, payload in raw_risks.items():
+        if isinstance(payload, dict):
+            value = payload.get("risk", 0.0)
+        else:
+            value = payload
+        try:
+            out[str(disease)] = float(value)
+        except (TypeError, ValueError):
+            out[str(disease)] = 0.0
+    return out
+
+
+def _run_async(coro):
+    try:
+        return asyncio.run(coro)
+    except RuntimeError:
+        # Safety fallback for environments where an event loop is already present.
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(coro)
+        finally:
+            loop.close()
+
+
+def _attach_ingredient_analysis(result: object) -> object:
+    if not isinstance(result, dict):
+        return result
+
+    product = result.get("product") if isinstance(result.get("product"), dict) else {}
+    nutriments = product.get("nutriments") if isinstance(product.get("nutriments"), dict) else {}
+    age_group_impacts = result.get("age_group_impacts") if isinstance(result.get("age_group_impacts"), dict) else {}
+    processing_level = result.get("processing_level") if isinstance(result.get("processing_level"), dict) else {}
+
+    if not nutriments:
+        return result
+
+    try:
+        analysis = _run_async(
+            explain_ingredients(
+                ingredients_text=product.get("ingredients_text"),
+                nutriments=nutriments,
+                health_score=float(result.get("health_score") or 0.0),
+                disease_risks=_extract_scalar_risks(result.get("disease_risks")),
+                age_group_impacts=age_group_impacts,
+                processing_level=processing_level,
+            )
+        )
+        result["ingredient_analysis"] = analysis
+    except Exception:
+        # Keep response stable even if explanation generation fails.
+        pass
+
+    return result
 
 
 def _map_bridge_error_status(error_type: str, message: str) -> int:
@@ -80,6 +142,7 @@ def analyze_food(payload: AnalyzeFoodRequest):
         error_type = str(result.get("error_type") or "bridge_error")
         raise HTTPException(status_code=_map_bridge_error_status(error_type, message), detail=message)
 
+    result = _attach_ingredient_analysis(result)
     return result
 
 
@@ -146,4 +209,5 @@ async def analyze_image(image: UploadFile = File(...)):
         message = str(result.get("error") or "Image analysis failed")
         raise HTTPException(status_code=422, detail=message)
 
+    result = _attach_ingredient_analysis(result)
     return result

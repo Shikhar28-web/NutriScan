@@ -868,6 +868,8 @@ def _derive_disease_risks_from_ml(
     salt_total = _safe_float(nutriments.get("salt_total_g"))
     energy = _safe_float(nutriments.get("energy_kcal"))
     energy_total = _safe_float(nutriments.get("energy_total_kcal"))
+    fiber = _safe_float(nutriments.get("fiber_100g"))
+    proteins = _safe_float(nutriments.get("proteins_100g"))
 
     sugar_signal_density = _clamp_ratio(sugar, 5.0, 30.0)
     sugar_signal_load = _clamp_ratio(sugar_total, 15.0, 55.0)
@@ -889,6 +891,8 @@ def _derive_disease_risks_from_ml(
     energy_signal_load = _clamp_ratio(energy_total, 250.0, 1100.0)
     energy_signal = (energy_signal_density * 0.45) + (energy_signal_load * 0.55)
     sugar_heavy_load = _clamp_ratio(sugar_total, 25.0, 70.0)
+    fiber_protect = _clamp_ratio(fiber, 3.0, 9.0)
+    protein_protect = _clamp_ratio(proteins, 5.0, 20.0)
 
     diabetes = (
         (sugar_signal * 0.44)
@@ -897,6 +901,8 @@ def _derive_disease_risks_from_ml(
         + (_prob(probs, "artificial_flavor") * 0.05)
         + (_prob(probs, "emulsifier") * 0.05)
     )
+    diabetes -= (fiber_protect * 0.12) + (protein_protect * 0.04)
+
     heart = (
         (sat_fat_signal * 0.35)
         + (salt_signal * 0.20)
@@ -904,6 +910,8 @@ def _derive_disease_risks_from_ml(
         + (_prob(probs, "emulsifier") * 0.10)
         + (_prob(probs, "palm_oil") * 0.23)
     )
+    heart -= fiber_protect * 0.08
+
     obesity = (
         (sugar_signal * 0.30)
         + (sugar_heavy_load * 0.30)
@@ -912,6 +920,7 @@ def _derive_disease_risks_from_ml(
         + (_prob(probs, "added_sugar") * 0.08)
         + (_prob(probs, "palm_oil") * 0.04)
     )
+    obesity -= (fiber_protect * 0.08) + (protein_protect * 0.04)
 
     # Guardrails: high absolute sugar load per consumed pack should elevate metabolic risk.
     if sugar_total >= 30.0:
@@ -926,6 +935,7 @@ def _derive_disease_risks_from_ml(
         + (_prob(probs, "emulsifier") * 0.10)
         + (_prob(probs, "artificial_color") * 0.10)
     )
+    hypertension -= fiber_protect * 0.05
 
     if has_palm_oil:
         heart += 0.20
@@ -935,6 +945,16 @@ def _derive_disease_risks_from_ml(
         # Palm oil should push heart/obesity concerns into higher risk territory.
         heart = max(heart, 0.68)
         obesity = max(obesity, 0.60)
+
+    # Products with genuinely low adverse nutrient load should not remain over-penalized.
+    if sugar <= 5.0 and sugar_total <= 12.5:
+        diabetes = min(diabetes, 0.28)
+    if salt <= 0.3 and salt_total <= 1.0:
+        hypertension = min(hypertension, 0.25)
+    if saturated_fat <= 1.5 and salt <= 0.3 and not has_palm_oil:
+        heart = min(heart, 0.30)
+    if energy <= 180 and sugar_total <= 12 and fat_total <= 10:
+        obesity = min(obesity, 0.32)
 
     risks = {
         "diabetes": float(np.clip(diabetes, 0.0, 1.0)),
@@ -963,22 +983,22 @@ def _derive_processing_level_from_ml(probs: Dict[str, float], observed_nova_grou
         if 1 <= nova <= 4:
             direct_meta = {
                 1: (
-                    "NOVA 1 — Unprocessed or Minimally Processed",
+                    "NOVA 1 - Unprocessed or Minimally Processed",
                     "Mapped directly from available product NOVA metadata.",
                     "Generally a cleaner processing profile.",
                 ),
                 2: (
-                    "NOVA 2 — Processed Culinary Ingredient",
+                    "NOVA 2 - Processed Culinary Ingredient",
                     "Mapped directly from available product NOVA metadata.",
                     "Usually acceptable in moderation based on product context.",
                 ),
                 3: (
-                    "NOVA 3 — Processed Food",
+                    "NOVA 3 - Processed Food",
                     "Mapped directly from available product NOVA metadata.",
                     "Processed profile; compare with less processed alternatives when possible.",
                 ),
                 4: (
-                    "NOVA 4 — Ultra-Processed Food",
+                    "NOVA 4 - Ultra-Processed Food",
                     "Mapped directly from available product NOVA metadata.",
                     "Ultra-processed profile; best consumed occasionally.",
                 ),
@@ -1012,22 +1032,22 @@ def _derive_processing_level_from_ml(probs: Dict[str, float], observed_nova_grou
 
     meta = {
         1: (
-            "NOVA 1 — Low Processing Signal",
+            "NOVA 1 - Low Processing Signal",
             "ML indicates low ultra-processing additive patterns.",
             "Generally a cleaner ingredient profile from model perspective.",
         ),
         2: (
-            "NOVA 2 — Mild Processing Signal",
+            "NOVA 2 - Mild Processing Signal",
             "ML indicates mild processing markers.",
             "Consume normally while checking context and portion size.",
         ),
         3: (
-            "NOVA 3 — Processed Pattern",
+            "NOVA 3 - Processed Pattern",
             "ML indicates multiple processing-related ingredient markers.",
             "Prefer moderate intake and compare with cleaner alternatives.",
         ),
         4: (
-            "NOVA 4 — Ultra-Processed Pattern",
+            "NOVA 4 - Ultra-Processed Pattern",
             "ML indicates strong ultra-processing additive signatures.",
             "Best consumed occasionally; prefer minimally processed alternatives.",
         ),
@@ -1042,42 +1062,134 @@ def _derive_processing_level_from_ml(probs: Dict[str, float], observed_nova_grou
         "source": "inferred",
     }
 
+def _risk_level_from_score(value: float) -> str:
+    if value < 0.25:
+        return "low"
+    if value < 0.5:
+        return "moderate"
+    if value < 0.75:
+        return "high"
+    return "very_high"
 
-def _derive_age_group_impacts_from_ml(disease_risks: Dict[str, Dict[str, float]]) -> Dict[str, Dict[str, str]]:
-    avg_risk = float(np.mean([v["risk"] for v in disease_risks.values()])) if disease_risks else 0.0
-    risk_map = {
-        "infant": min(1.0, avg_risk * 1.15),
-        "child": min(1.0, avg_risk * 1.1),
-        "young_adult": avg_risk,
-        "adult": avg_risk,
-        "senior": min(1.0, avg_risk * 1.05),
+
+def _derive_age_group_impacts_from_ml(
+    disease_risks: Dict[str, Dict[str, float]],
+    nutriments: Dict[str, float],
+    processing_level: Optional[Dict[str, str]] = None,
+) -> Dict[str, Dict[str, str]]:
+    sugar = _safe_float(nutriments.get("sugar_100g"))
+    salt = _safe_float(nutriments.get("salt_100g"))
+    saturated_fat = _safe_float(nutriments.get("saturated_fat_100g"))
+    energy = _safe_float(nutriments.get("energy_kcal"))
+    additives = _safe_float(nutriments.get("additives_count"))
+    fiber = _safe_float(nutriments.get("fiber_100g"))
+
+    sugar_signal = _clamp_ratio(sugar, 5.0, 22.5)
+    salt_signal = _clamp_ratio(salt, 0.3, 1.5)
+    sat_fat_signal = _clamp_ratio(saturated_fat, 1.5, 5.0)
+    energy_signal = _clamp_ratio(energy, 120.0, 450.0)
+    additives_signal = _clamp_ratio(additives, 1.0, 6.0)
+    fiber_protect = _clamp_ratio(fiber, 3.0, 8.0)
+
+    diabetes = _safe_float((disease_risks.get("diabetes") or {}).get("risk"))
+    obesity = _safe_float((disease_risks.get("obesity") or {}).get("risk"))
+    heart = _safe_float((disease_risks.get("heart_disease") or {}).get("risk"))
+    hypertension = _safe_float((disease_risks.get("hypertension") or {}).get("risk"))
+    metabolic_signal = (diabetes * 0.6) + (obesity * 0.4)
+    cardio_signal = (heart * 0.55) + (hypertension * 0.45)
+
+    nova_group = int(_safe_float((processing_level or {}).get("nova_group"))) if processing_level else 0
+    nova_penalty = 0.08 if nova_group >= 4 else 0.03 if nova_group == 3 else 0.0
+
+    risk_components = {
+        "infant": {
+            "sugar": sugar_signal * 0.24,
+            "salt": salt_signal * 0.24,
+            "additives": additives_signal * 0.24,
+            "saturated_fat": sat_fat_signal * 0.14,
+            "energy": energy_signal * 0.08,
+            "metabolic": metabolic_signal * 0.04,
+            "cardio": cardio_signal * 0.02,
+        },
+        "child": {
+            "sugar": sugar_signal * 0.24,
+            "salt": salt_signal * 0.20,
+            "additives": additives_signal * 0.18,
+            "saturated_fat": sat_fat_signal * 0.14,
+            "energy": energy_signal * 0.10,
+            "metabolic": metabolic_signal * 0.10,
+            "cardio": cardio_signal * 0.04,
+        },
+        "young_adult": {
+            "sugar": sugar_signal * 0.20,
+            "salt": salt_signal * 0.14,
+            "additives": additives_signal * 0.12,
+            "saturated_fat": sat_fat_signal * 0.14,
+            "energy": energy_signal * 0.14,
+            "metabolic": metabolic_signal * 0.20,
+            "cardio": cardio_signal * 0.06,
+        },
+        "adult": {
+            "sugar": sugar_signal * 0.16,
+            "salt": salt_signal * 0.18,
+            "additives": additives_signal * 0.10,
+            "saturated_fat": sat_fat_signal * 0.18,
+            "energy": energy_signal * 0.12,
+            "metabolic": metabolic_signal * 0.14,
+            "cardio": cardio_signal * 0.12,
+        },
+        "elderly": {
+            "sugar": sugar_signal * 0.12,
+            "salt": salt_signal * 0.24,
+            "additives": additives_signal * 0.10,
+            "saturated_fat": sat_fat_signal * 0.20,
+            "energy": energy_signal * 0.10,
+            "metabolic": metabolic_signal * 0.10,
+            "cardio": cardio_signal * 0.14,
+        },
     }
-
-    def _level(v: float) -> str:
-        if v < 0.25:
-            return "low"
-        if v < 0.5:
-            return "moderate"
-        if v < 0.75:
-            return "high"
-        return "very_high"
 
     labels = {
-        "infant": "Infant (0–2 years)",
-        "child": "Child (3–12 years)",
-        "young_adult": "Young Adult (13–35 years)",
-        "adult": "Adult (36–60 years)",
-        "senior": "Senior (60+ years)",
+        "infant": "Infant (0-2 years)",
+        "child": "Child (3-12 years)",
+        "young_adult": "Young Adult (13-35 years)",
+        "adult": "Adult (36-60 years)",
+        "elderly": "Elderly (60+ years)",
     }
 
-    return {
-        key: {
-            "label": labels[key],
-            "risk_level": _level(value),
-            "notes": "Estimated from model-predicted ingredient risk profile.",
-        }
-        for key, value in risk_map.items()
+    group_note_suffix = {
+        "infant": "Young children should avoid foods high in sugar, salt, and additives.",
+        "child": "Frequent intake can affect taste habits and daily nutrient balance.",
+        "young_adult": "Portion size and intake frequency mainly determine long-term impact.",
+        "adult": "Regular intake may increase long-term metabolic and cardiovascular burden.",
+        "elderly": "Higher sodium and saturated fat can have a stronger blood-pressure impact.",
     }
+
+    impacts: Dict[str, Dict[str, str]] = {}
+    for group, components in risk_components.items():
+        risk_value = float(np.clip(sum(components.values()) - (fiber_protect * 0.14) + nova_penalty, 0.0, 1.0))
+        top_drivers = sorted(components.items(), key=lambda item: item[1], reverse=True)[:2]
+        driver_labels = {
+            "sugar": "sugar",
+            "salt": "salt",
+            "saturated_fat": "saturated fat",
+            "additives": "additives",
+            "energy": "energy density",
+            "metabolic": "metabolic risk profile",
+            "cardio": "cardiovascular risk profile",
+        }
+        driver_text = " and ".join(driver_labels.get(name, name) for name, _ in top_drivers)
+        notes = (
+            f"Primary concern: {driver_text}. "
+            f"{group_note_suffix[group]}"
+        )
+        impacts[group] = {
+            "label": labels[group],
+            "risk_level": _risk_level_from_score(risk_value),
+            "notes": notes,
+        }
+
+    return impacts
 
 
 def _daily_intake_highlights(nutriments: Dict[str, float]) -> List[str]:
@@ -1182,7 +1294,11 @@ def analyze_product(product: Dict[str, Any]) -> Dict[str, Any]:
         "health_note": "Train/export models to enable processing-level inference.",
         "source": "unknown",
     }
-    age_group_impacts = _derive_age_group_impacts_from_ml(disease_risks) if disease_risks else {}
+    age_group_impacts = _derive_age_group_impacts_from_ml(
+        disease_risks,
+        nutriments,
+        processing_level=processing_level,
+    ) if disease_risks else {}
     consumption_disclaimer = _derive_consumption_disclaimer_from_ml(health_score, nutriments)
 
     return {

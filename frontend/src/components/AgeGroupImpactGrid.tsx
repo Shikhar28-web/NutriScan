@@ -25,7 +25,12 @@ const RISK_LABEL: Record<string, string> = {
 };
 
 export default function AgeGroupImpactGrid({ impacts }: AgeGroupImpactGridProps) {
-  const entries = Object.entries(impacts);
+  const ORDER = ['infant', 'child', 'young_adult', 'adult', 'elderly'];
+  const entries = Object.entries(impacts).sort((a, b) => {
+    const ai = ORDER.indexOf(a[0]);
+    const bi = ORDER.indexOf(b[0]);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
 
   return (
     <div className="glass rounded-2xl p-6 flex flex-col gap-5">
@@ -68,7 +73,7 @@ export default function AgeGroupImpactGrid({ impacts }: AgeGroupImpactGridProps)
               <p className="text-white text-sm font-medium capitalize">
                 {impact.label ?? key.replace(/_/g, ' ')}
               </p>
-              <p className="text-slate-500 text-xs leading-relaxed line-clamp-3">
+              <p className="text-slate-500 text-xs leading-relaxed min-h-[3.5rem]">
                 {impact.notes}
               </p>
             </motion.div>
