@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { CheckCircle2, Lock, Mail, User } from 'lucide-react';
@@ -5,6 +8,41 @@ import PageShell from '@/components/PageShell';
 import AnimatedReveal from '@/components/AnimatedReveal';
 
 export default function SignupPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Signup failed');
+      }
+
+      setSuccess('Account created successfully! You can now log in.');
+      setEmail('');
+      setPassword('');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <PageShell title="Create Account" subtitle="Join NutriScan and unlock personalized food intelligence from day one.">
       <section className="page-wrap section-block pt-8">
@@ -38,30 +76,25 @@ export default function SignupPage() {
               <Image src="/logo.svg" alt="NutriScan logo" width={30} height={30} />
               <h3 className="text-2xl font-medium">Sign up</h3>
             </div>
-            <form className="mt-6 space-y-4">
-              <label className="block">
-                <span className="text-xs tracking-[0.18em] text-white/65">FULL NAME</span>
-                <div className="mt-2 flex items-center gap-3 rounded-xl border border-white/10 bg-[#0f172a] px-4 py-3">
-                  <User size={16} className="text-white/60" />
-                  <input type="text" placeholder="Your name" className="w-full bg-transparent text-sm text-white placeholder:text-white/35 outline-none" />
-                </div>
-              </label>
+            {error && <div className="mt-4 p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-200 text-sm">{error}</div>}
+            {success && <div className="mt-4 p-3 bg-green-500/20 border border-green-500/50 rounded-xl text-green-200 text-sm">{success}</div>}
+            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
               <label className="block">
                 <span className="text-xs tracking-[0.18em] text-white/65">EMAIL</span>
                 <div className="mt-2 flex items-center gap-3 rounded-xl border border-white/10 bg-[#0f172a] px-4 py-3">
                   <Mail size={16} className="text-white/60" />
-                  <input type="email" placeholder="you@example.com" className="w-full bg-transparent text-sm text-white placeholder:text-white/35 outline-none" />
+                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@example.com" className="w-full bg-transparent text-sm text-white placeholder:text-white/35 outline-none" />
                 </div>
               </label>
               <label className="block">
                 <span className="text-xs tracking-[0.18em] text-white/65">PASSWORD</span>
                 <div className="mt-2 flex items-center gap-3 rounded-xl border border-white/10 bg-[#0f172a] px-4 py-3">
                   <Lock size={16} className="text-white/60" />
-                  <input type="password" placeholder="Create a password" className="w-full bg-transparent text-sm text-white placeholder:text-white/35 outline-none" />
+                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="Create a password" className="w-full bg-transparent text-sm text-white placeholder:text-white/35 outline-none" />
                 </div>
               </label>
-              <button type="submit" className="btn-primary w-full">
-                CREATE ACCOUNT
+              <button type="submit" disabled={loading} className="btn-primary w-full disabled:opacity-50">
+                {loading ? 'CREATING...' : 'CREATE ACCOUNT'}
               </button>
             </form>
             <p className="mt-5 text-sm text-white/70">
