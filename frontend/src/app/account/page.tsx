@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CalendarClock, LogOut, Search, User } from 'lucide-react';
 
-import Navbar from '@/components/Navbar';
 import { useAuth } from '@/components/AuthProvider';
 import { getSearchHistory } from '@/lib/auth';
 import type { SearchHistoryItem } from '@/lib/types';
@@ -46,7 +45,6 @@ export default function AccountPage() {
   if (loading || !user) {
     return (
       <main className="min-h-screen bg-bg-primary">
-        <Navbar />
         <div className="mx-auto max-w-6xl px-4 py-28 text-center text-slate-400">Loading your account...</div>
       </main>
     );
@@ -54,7 +52,6 @@ export default function AccountPage() {
 
   return (
     <main className="min-h-screen bg-bg-primary">
-      <Navbar />
 
       <section className="mx-auto max-w-6xl px-4 py-24">
         <div className="mb-8 flex items-center justify-between gap-4">
