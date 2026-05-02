@@ -43,7 +43,7 @@ export default function LoginPage() {
   };
 
   return (
-    <PageShell title="Welcome Back" subtitle="Sign in to continue your food scans, history, and personalized guidance.">
+    <PageShell title="Welcome Back" subtitle="Sign in to continue your food scans, history, and personalized guidance." hideNavbar={true}>
       <section className="page-wrap section-block pt-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <AnimatedReveal className="liquid-glass-strong rounded-3xl p-8 md:p-10">
