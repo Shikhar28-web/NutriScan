@@ -82,7 +82,7 @@ function ChatWindow({ close }: { close: () => void }) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: 'Hi there! I am Nutri, your AI Nutrition Assistant. Are you experiencing any discomfort, or do you need nutrition advice?' }
+    { role: 'assistant', content: 'Hi there! I am Nutri, your AI Nutrition Assistant. Ask me about nutrition, ingredients, food choices, or symptoms you want to understand better.' }
   ]);
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -92,29 +92,33 @@ function ChatWindow({ close }: { close: () => void }) {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim() || loading) return;
     const userMessage = input.trim();
     setInput('');
     setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
     setLoading(true);
 
-    // Mock AI response logic based on simple keywords
-    setTimeout(() => {
-      let aiResponse = "That's interesting. I can help you find healthier alternatives and track your nutrition better. What else would you like to know?";
-      const lowerInput = userMessage.toLowerCase();
-      
-      if (lowerInput.includes('stomach') || lowerInput.includes('digestion') || lowerInput.includes('bloat')) {
-        aiResponse = "Stomach discomfort or bloating can often be triggered by excessive sodium, hidden artificial sweeteners (like sucralose), or lack of fiber. Try scanning your recent meals to check for these ingredients!";
-      } else if (lowerInput.includes('tired') || lowerInput.includes('energy') || lowerInput.includes('fatigue')) {
-        aiResponse = "Energy dips are common after eating high glycemic index foods or processed sugars. You might want to look for foods rich in B-Vitamins and complex carbs instead.";
-      } else if (lowerInput.includes('sugar') || lowerInput.includes('sweet')) {
-        aiResponse = "Consuming too much added sugar can cause energy crashes and inflammation. NutriScan helps you flag hidden sugars automatically.";
-      }
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: userMessage,
+        }),
+      });
 
-      setMessages((prev) => [...prev, { role: 'assistant', content: aiResponse }]);
+      const data = await response.json().catch(() => ({}));
+      const reply = typeof data.answer === 'string' && data.answer.trim()
+        ? data.answer
+        : 'No response was generated.';
+
+      setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
+    } catch {
+      setMessages((prev) => [...prev, { role: 'assistant', content: 'Failed to reach the AI service. Please try again.' }]);
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

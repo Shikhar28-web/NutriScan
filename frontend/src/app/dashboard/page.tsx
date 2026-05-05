@@ -406,8 +406,9 @@ function DashboardContent() {
 
 export default function DashboardPage() {
   return (
-    <main className="min-h-screen bg-bg-primary">
+    <>
       <Navbar />
+      <main className="min-h-screen bg-bg-primary">
       <div className="pt-16">
         <Suspense fallback={
           <div className="flex items-center justify-center min-h-[60vh]">
@@ -423,6 +424,7 @@ export default function DashboardPage() {
         <ChatWrapper />
       </Suspense>
     </main>
+    </>
   );
 }
 

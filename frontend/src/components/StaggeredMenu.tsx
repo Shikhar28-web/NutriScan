@@ -15,7 +15,6 @@ export function StaggeredMenu({
   onGoHome,
   onGoScan,
   onGoDashboard,
-  onGoPricing,
   onGoFaq,
 }: {
   isOpen: boolean;
@@ -23,7 +22,7 @@ export function StaggeredMenu({
   onGoHome: () => void;
   onGoScan: () => void;
   onGoDashboard: () => void;
-  onGoPricing: () => void;
+  onGoPricing?: () => void;
   onGoFaq: () => void;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -37,10 +36,10 @@ export function StaggeredMenu({
       { label: 'Home', action: () => (onClose(), onGoHome()) },
       { label: 'Scan', action: () => (onClose(), onGoScan()) },
       { label: 'Dashboard', action: () => (onClose(), onGoDashboard()) },
-      { label: 'Pricing', action: () => (onClose(), onGoPricing()) },
+      // Pricing removed from menu
       { label: 'FAQ', action: () => (onClose(), onGoFaq()) },
     ],
-    [onClose, onGoHome, onGoScan, onGoDashboard, onGoPricing, onGoFaq]
+    [onClose, onGoHome, onGoScan, onGoDashboard, onGoFaq]
   );
 
   useEffect(() => {

@@ -25,7 +25,6 @@ export default function Navbar() {
     { href: '/scan', label: 'Scan Food' },
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/history', label: 'History' },
-    { href: '/pricing', label: 'Pricing' },
     { href: '/faq', label: 'FAQ' },
   ];
 
@@ -111,7 +110,7 @@ export default function Navbar() {
 
             <Link
               href="/login"
-              className="ml-3 flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-brand-green to-emerald-400 text-black font-semibold text-sm shadow-glow transition-all duration-300"
+              className="ml-3 flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-brand-green to-emerald-400 text-white font-semibold text-sm shadow-glow transition-all duration-300"
             >
               <Scan className="w-4 h-4" />
               Account
@@ -187,7 +186,7 @@ export default function Navbar() {
             <Link
               href="/login"
               onClick={() => setMobileOpen(false)}
-              className="flex items-center justify-center gap-2 mt-2 px-4 py-3 rounded-xl bg-gradient-to-r from-brand-green to-emerald-400 text-black font-semibold text-sm"
+              className="flex items-center justify-center gap-2 mt-2 px-4 py-3 rounded-xl bg-gradient-to-r from-brand-green to-emerald-400 text-white font-semibold text-sm"
             >
               <Scan className="w-4 h-4" />
               Account

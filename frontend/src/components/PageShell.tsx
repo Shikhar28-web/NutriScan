@@ -6,7 +6,6 @@ const navLinks = [
   { href: '/', label: 'Home' },
   { href: '/scan', label: 'Scan' },
   { href: '/dashboard', label: 'Dashboard' },
-  { href: '/pricing', label: 'Pricing' },
   { href: '/faq', label: 'FAQ' },
   { href: '/history', label: 'History' },
 ];
@@ -24,33 +23,7 @@ export default function PageShell({
 }) {
   return (
     <main className="min-h-screen bg-bg-primary text-white">
-      {!hideNavbar && (
-        <header className="sticky top-0 z-50 border-b border-white/10 bg-bg-primary/95">
-          <div className="max-w-6xl mx-auto px-6 md:px-10 h-18 md:h-20 flex items-center justify-between">
-            <Link href="/" className="inline-flex items-center gap-3">
-              <Image src="/logo.svg" alt="NutriScan logo" width={30} height={30} />
-              <span className="text-lg font-semibold">
-                <span className="gradient-text">Nutri</span>Scan
-              </span>
-            </Link>
-            <nav className="hidden md:flex items-center gap-2">
-              {navLinks.map(link => (
-                <Link key={link.href} href={link.href} className="glass rounded-full px-4 py-2 text-xs tracking-[0.14em] text-white/80">
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-            <div className="flex items-center gap-2">
-              <Link href="/login" className="liquid-glass rounded-full px-4 py-2 text-xs tracking-[0.14em] text-white/90">
-                Login
-              </Link>
-              <Link href="/signup" className="liquid-glass-strong rounded-full px-4 py-2 text-xs tracking-[0.14em] text-white">
-                Sign up
-              </Link>
-            </div>
-          </div>
-        </header>
-      )}
+      {/* Sticky header removed — floating Navbar is used instead */}
 
       {(title || subtitle) && (
         <section className="max-w-6xl mx-auto px-6 md:px-10 pt-10">

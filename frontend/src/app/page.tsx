@@ -215,17 +215,7 @@ function FloatingMiniFood({ className, kind }: { className: string; kind: 'banan
 function Hero({ onStart }: { onStart: () => void }) {
   return (
     <section className="relative z-10 min-h-screen px-6 pb-20 pt-10 md:px-12 lg:px-20">
-      <div className="mx-auto flex max-w-6xl items-center justify-between rounded-full border border-white/10 bg-white/[0.03] px-5 py-3">
-        <div className="flex items-center gap-2 text-sm font-medium tracking-[0.2em] text-white/85">
-          <Sparkles className="h-4 w-4 text-[#00ff99]" />
-          NUTRISCAN
-        </div>
-        <button type="button" onClick={onStart} className="rounded-full border border-[#00ff99]/40 bg-[#00ff99]/10 px-4 py-2 text-xs tracking-[0.16em] text-[#00ff99] transition hover:bg-[#00ff99]/20">
-          START SCANNING
-        </button>
-      </div>
-
-      <div className="mx-auto mt-24 max-w-6xl">
+      <div className="mx-auto mt-14 max-w-6xl">
         <motion.div {...fadeUp} className="max-w-2xl">
           <h1 className="text-4xl font-semibold leading-tight md:text-6xl">
             Scan Your Food.
