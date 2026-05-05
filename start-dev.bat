@@ -46,6 +46,6 @@ REM Start the FastAPI backend in a new command window
 start "NutriScan Backend" cmd /c "cd /d \"%PROJECT_DIR%\" && \"%PYTHON_BIN%\" -m uvicorn backend.app:app --host %BACKEND_HOST% --port %BACKEND_PORT% --reload"
 
 REM Start Next.js frontend in a new command window
-start "NutriScan Frontend" cmd /c "cd /d \"%FRONTEND_DIR%\" && npm run dev -- --hostname 0.0.0.0"
+start "NutriScan Frontend" cmd /c "cd /d \"%FRONTEND_DIR%\" && npm run dev"
 
 endlocal
