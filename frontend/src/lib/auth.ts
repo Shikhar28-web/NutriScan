@@ -7,6 +7,36 @@ import type {
   SignupRequest,
 } from './types';
 
+function extractErrorMessage(payload: unknown): string {
+  if (!payload || typeof payload !== 'object') {
+    return 'Request failed.';
+  }
+
+  const detail = (payload as { detail?: unknown }).detail;
+  if (typeof detail === 'string' && detail.trim()) {
+    return detail;
+  }
+  if (Array.isArray(detail) && detail.length > 0) {
+    const first = detail[0];
+    if (typeof first === 'string' && first.trim()) {
+      return first;
+    }
+    if (first && typeof first === 'object' && 'msg' in first) {
+      const msg = (first as { msg?: unknown }).msg;
+      if (typeof msg === 'string' && msg.trim()) {
+        return msg;
+      }
+    }
+  }
+
+  const error = (payload as { error?: unknown }).error;
+  if (typeof error === 'string' && error.trim()) {
+    return error;
+  }
+
+  return 'Request failed.';
+}
+
 async function requestJson<T>(url: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(url, {
     ...init,
@@ -18,13 +48,7 @@ async function requestJson<T>(url: string, init: RequestInit = {}): Promise<T> {
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message =
-      typeof payload === 'object' && payload && 'detail' in payload
-        ? String((payload as { detail?: unknown }).detail || 'Request failed.')
-        : typeof payload === 'object' && payload && 'error' in payload
-          ? String((payload as { error?: unknown }).error || 'Request failed.')
-          : 'Request failed.';
-    throw new Error(message);
+    throw new Error(extractErrorMessage(payload));
   }
 
   return payload as T;

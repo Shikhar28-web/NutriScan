@@ -108,13 +108,15 @@ export default function Navbar() {
               </button>
             )}
 
-            <Link
-              href="/login"
-              className="ml-3 flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-brand-green to-emerald-400 text-white font-semibold text-sm shadow-glow transition-all duration-300"
-            >
-              <Scan className="w-4 h-4" />
-              Account
-            </Link>
+            {!loading && (
+              <Link
+                href={user ? '/account' : '/signup'}
+                className="ml-3 flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-brand-green to-emerald-400 text-white font-semibold text-sm shadow-glow transition-all duration-300"
+              >
+                <Scan className="w-4 h-4" />
+                {user ? 'Account' : 'Get Started'}
+              </Link>
+            )}
           </div>
 
           {/* Mobile Toggle */}
@@ -183,14 +185,16 @@ export default function Navbar() {
               </button>
             )}
 
-            <Link
-              href="/login"
-              onClick={() => setMobileOpen(false)}
-              className="flex items-center justify-center gap-2 mt-2 px-4 py-3 rounded-xl bg-gradient-to-r from-brand-green to-emerald-400 text-white font-semibold text-sm"
-            >
-              <Scan className="w-4 h-4" />
-              Account
-            </Link>
+            {!loading && (
+              <Link
+                href={user ? '/account' : '/signup'}
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center justify-center gap-2 mt-2 px-4 py-3 rounded-xl bg-gradient-to-r from-brand-green to-emerald-400 text-white font-semibold text-sm"
+              >
+                <Scan className="w-4 h-4" />
+                {user ? 'Account' : 'Get Started'}
+              </Link>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

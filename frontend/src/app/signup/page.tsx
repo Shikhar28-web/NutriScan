@@ -3,11 +3,16 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { CheckCircle2, Lock, Mail, User } from 'lucide-react';
 import PageShell from '@/components/PageShell';
 import AnimatedReveal from '@/components/AnimatedReveal';
+import { useAuth } from '@/components/AuthProvider';
 
 export default function SignupPage() {
+  const router = useRouter();
+  const { register } = useAuth();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -21,23 +26,12 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Signup failed');
-      }
-
-      setSuccess('Account created successfully! You can now log in.');
-      setEmail('');
-      setPassword('');
-    } catch (err: any) {
-      setError(err.message);
+      await register({ name: name.trim(), email: email.trim(), password });
+      setSuccess('Account created successfully!');
+      router.push('/account');
+      router.refresh();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Signup failed');
     } finally {
       setLoading(false);
     }
@@ -79,6 +73,13 @@ export default function SignupPage() {
             {error && <div className="mt-4 p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-200 text-sm">{error}</div>}
             {success && <div className="mt-4 p-3 bg-green-500/20 border border-green-500/50 rounded-xl text-green-200 text-sm">{success}</div>}
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+              <label className="block">
+                <span className="text-xs tracking-[0.18em] text-white/65">NAME</span>
+                <div className="mt-2 flex items-center gap-3 rounded-xl border border-white/10 bg-[#0f172a] px-4 py-3">
+                  <User size={16} className="text-white/60" />
+                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} required minLength={2} maxLength={80} placeholder="Your full name" className="w-full bg-transparent text-sm text-white placeholder:text-white/35 outline-none" />
+                </div>
+              </label>
               <label className="block">
                 <span className="text-xs tracking-[0.18em] text-white/65">EMAIL</span>
                 <div className="mt-2 flex items-center gap-3 rounded-xl border border-white/10 bg-[#0f172a] px-4 py-3">

@@ -3,11 +3,16 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Lock, Mail, ShieldCheck } from 'lucide-react';
 import PageShell from '@/components/PageShell';
 import AnimatedReveal from '@/components/AnimatedReveal';
+import { useAuth } from '@/components/AuthProvider';
 
 export default function LoginPage() {
+  const router = useRouter();
+  const params = useSearchParams();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -21,22 +26,13 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Login failed');
-      }
-
+      await login({ email: email.trim(), password });
       setSuccess('Logged in successfully!');
-      // Optional: Redirect user or save session state
-    } catch (err: any) {
-      setError(err.message);
+      const nextPath = params.get('next');
+      router.push(nextPath && nextPath.startsWith('/') ? nextPath : '/account');
+      router.refresh();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
       setLoading(false);
     }
